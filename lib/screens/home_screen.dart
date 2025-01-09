@@ -8,7 +8,7 @@ import '../data/mock_data.dart';
 import 'package:flutter/cupertino.dart';
 import '../constants/colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false;
   String? _error;
   late YoutubePlayerController _youtubeController;
-  bool _isYoutubeReady = false;
 
   @override
   void initState() {
@@ -30,27 +29,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchQuotes();
     
     _youtubeController = YoutubePlayerController(
-      initialVideoId: 'vrUZBZpQjHc',
-      flags: const YoutubePlayerFlags(
-        autoPlay: false,
+      params: const YoutubePlayerParams(
+        showControls: true,
+        showFullscreenButton: true,
+        strictRelatedVideos: true,
+        enableJavaScript: true,
+        playsInline: true,
         mute: false,
-        enableCaption: true,
       ),
-    )..addListener(_onYouTubeStateChange);
-  }
-
-  void _onYouTubeStateChange() {
-    if (_youtubeController.value.isReady && !_isYoutubeReady) {
-      setState(() {
-        _isYoutubeReady = true;
-      });
-    }
+    )..loadVideoById(
+        videoId: 'vrUZBZpQjHc',
+      );
   }
 
   @override
   void dispose() {
-    _youtubeController.removeListener(_onYouTubeStateChange);
-    _youtubeController.dispose();
+    _youtubeController.close();
     super.dispose();
   }
 
@@ -76,12 +70,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return YoutubePlayerBuilder(
-      builder: (context, player) {
-        return Scaffold(
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(56.0),
-            child: Container(
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(100.0),
+        child: Column(
+          children: [
+            Container(
               decoration: BoxDecoration(
                 color: SetColors.yellow,
                 boxShadow: [
@@ -93,49 +87,88 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: SafeArea(
+                bottom: false,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Hello John',
+                        'Welcome, John Smith',
                         style: TextStyle(
                           color: SetColors.darkBlue,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SvgPicture.asset(
-                        'assets/images/set-logo.svg',
-                        height: 32,
-                        fit: BoxFit.contain,
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.favorite_border,
+                              color: SetColors.darkBlue,
+                            ),
+                            onPressed: () {
+                              // Handle favorites
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none,
+                              color: SetColors.darkBlue,
+                            ),
+                            onPressed: () {
+                              // Handle notifications
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          SvgPicture.asset(
+                            'assets/images/set-logo.svg',
+                            height: 32,
+                            fit: BoxFit.contain,
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-          body: RefreshIndicator(
-            onRefresh: _fetchQuotes,
-            child: _buildBody(),
-          ),
-        );
-      },
-      player: YoutubePlayer(
-        controller: _youtubeController,
-        showVideoProgressIndicator: true,
-        progressIndicatorColor: Colors.red,
-        progressColors: const ProgressBarColors(
-          playedColor: Colors.red,
-          handleColor: Colors.redAccent,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              decoration: BoxDecoration(
+                color: SetColors.yellow.withOpacity(0.7),
+                border: Border(
+                  top: BorderSide(
+                    color: SetColors.darkBlue.withOpacity(0.1),
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: const Text(
+                'Follow us on Social Media for the latest updates',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: SetColors.darkBlue,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
-        onReady: () {
-          setState(() {
-            _isYoutubeReady = true;
-          });
-        },
+      ),
+      body: Column(
+        children: [
+          _buildQuickAccessBoxes(),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetchQuotes,
+              child: _buildBody(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -193,15 +226,20 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'SET Index',
+                  'My portfolio',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                Text(
-                  _quoteData!.date,
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(width: 8),
+                Container(
+                  height: 24,
+                  width: 48,
+                  child: CustomPaint(
+                    painter: MiniChartPainter(
+                      color: Colors.green,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -454,38 +492,152 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-          if (_isYoutubeReady)
-            AspectRatio(
-              aspectRatio: 16 / 9,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              width: double.infinity,
               child: YoutubePlayer(
                 controller: _youtubeController,
-                showVideoProgressIndicator: true,
-                progressIndicatorColor: Colors.red,
-                progressColors: const ProgressBarColors(
-                  playedColor: Colors.red,
-                  handleColor: Colors.redAccent,
-                ),
-              ),
-            )
-          else
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: CircularProgressIndicator(),
+                aspectRatio: 16 / 9,
               ),
             ),
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              'Market Analysis',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Market Analysis',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Latest market insights and analysis from SET experts',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildQuickAccessBoxes() {
+    final boxes = [
+      {
+        'icon': Icons.trending_up,
+        'label': 'Market',
+        'color': SetColors.darkBlue,
+      },
+      {
+        'icon': Icons.bar_chart,
+        'label': 'Stats',
+        'color': Colors.green,
+      },
+      {
+        'icon': Icons.article_outlined,
+        'label': 'News',
+        'color': Colors.orange,
+      },
+      {
+        'icon': Icons.account_balance_wallet,
+        'label': 'Portfolio',
+        'color': Colors.purple,
+      },
+    ];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      margin: const EdgeInsets.only(top: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: boxes.map((box) => _buildBox(
+          icon: box['icon'] as IconData,
+          label: box['label'] as String,
+          color: box['color'] as Color,
+        )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildBox({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      width: 80,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MiniChartPainter extends CustomPainter {
+  final Color color;
+
+  MiniChartPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    
+    // Starting point
+    path.moveTo(0, size.height * 0.7);
+    
+    // Create a smooth upward trend line
+    path.cubicTo(
+      size.width * 0.2,
+      size.height * 0.8,
+      size.width * 0.4,
+      size.height * 0.3,
+      size.width,
+      size.height * 0.2,
+    );
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

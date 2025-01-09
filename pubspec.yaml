@@ -12,7 +12,7 @@ dependencies:
   fl_chart: ^0.65.0
   cupertino_icons: ^1.0.6
   flutter_svg: ^2.0.10
-  youtube_player_flutter: ^8.1.2
+  youtube_player_iframe: ^4.0.4
   
 dev_dependencies:
   flutter_test:
@@ -24,3 +24,9 @@ flutter:
   
   assets:
     - assets/images/set-logo.svg
+
+scripts:
+  dev: flutter run --hot
+  dev-web: flutter run -d chrome --web-renderer html --hot
+  dev-ios: flutter run -d ios --hot
+  dev-android: flutter run -d android --hot
